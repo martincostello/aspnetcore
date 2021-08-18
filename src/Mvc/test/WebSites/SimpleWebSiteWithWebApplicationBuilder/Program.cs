@@ -37,6 +37,12 @@ app.MapGet("/environment", (IHostEnvironment environment) => environment.Environ
 
 app.MapGet("/greeting", (IConfiguration config) => config["Greeting"]);
 
+app.MapPost("/upload", async (IFormFile file) =>
+{
+    await using var uploadStream = file.OpenReadStream();
+    return uploadStream.Length;
+});
+
 app.Run();
 
 record Person(string Name, int Age);
