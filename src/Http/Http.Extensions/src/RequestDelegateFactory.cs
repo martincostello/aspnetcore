@@ -242,7 +242,7 @@ namespace Microsoft.AspNetCore.Http
             }
             else if (parameterCustomAttributes.OfType<IFromFileMetadata>().FirstOrDefault() is { } fileAttribute)
             {
-                return BindParameterFromFormFile(parameter, fileAttribute.Name ?? parameter.Name, factoryContext);
+                return BindParameterFromFormFile(parameter, fileAttribute.Name ?? parameter.Name, factoryContext, RequestDelegateFactoryConstants.FormFileAttribute);
             }
             else if (parameter.CustomAttributes.Any(a => typeof(IFromServiceMetadata).IsAssignableFrom(a.AttributeType)))
             {
@@ -281,12 +281,13 @@ namespace Microsoft.AspNetCore.Http
                 }
 
                 factoryContext.ReadForm = true;
+                factoryContext.TrackedParameters.Add(parameter.Name, RequestDelegateFactoryConstants.FormFileParameter);
 
                 return FormFilesExpr;
             }
             else if (parameter.ParameterType == typeof(IFormFile))
             {
-                return BindParameterFromFormFile(parameter, parameter.Name, factoryContext);
+                return BindParameterFromFormFile(parameter, parameter.Name, factoryContext, RequestDelegateFactoryConstants.FormFileParameter);
             }
             else if (parameter.ParameterType == typeof(string) || TryParseMethodCache.HasTryParseStringMethod(parameter))
             {
@@ -801,7 +802,11 @@ namespace Microsoft.AspNetCore.Http
             return argument;
         }
 
-        private static Expression BindParameterFromFormFile(ParameterInfo parameter, string key, FactoryContext factoryContext)
+        private static Expression BindParameterFromFormFile(
+            ParameterInfo parameter,
+            string key,
+            FactoryContext factoryContext,
+            string trackedParameterSource)
         {
             if (factoryContext.JsonRequestBodyType is not null)
             {
@@ -809,6 +814,7 @@ namespace Microsoft.AspNetCore.Http
             }
 
             factoryContext.ReadForm = true;
+            factoryContext.TrackedParameters.Add(key, trackedParameterSource);
 
             var valueExpression = GetValueFromProperty(FormFilesExpr, key, typeof(IFormFile));
 
@@ -1137,11 +1143,13 @@ namespace Microsoft.AspNetCore.Http
             public const string HeaderAttribute = "Header (Attribute)";
             public const string BodyAttribute = "Body (Attribute)";
             public const string ServiceAttribute = "Service (Attribute)";
+            public const string FormFileAttribute = "Form File (Attribute)";
             public const string RouteParameter = "Route (Inferred)";
             public const string QueryStringParameter = "Query String (Inferred)";
             public const string ServiceParameter = "Services (Inferred)";
             public const string BodyParameter = "Body (Inferred)";
             public const string RouteOrQueryStringParameter = "Route or Query String (Inferred)";
+            public const string FormFileParameter = "Form File (Inferred)";
         }
 
         private static partial class Log
