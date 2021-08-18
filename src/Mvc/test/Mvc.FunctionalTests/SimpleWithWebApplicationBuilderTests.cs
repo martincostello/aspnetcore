@@ -187,5 +187,24 @@ namespace Microsoft.AspNetCore.Mvc.FunctionalTests
             // Assert
             Assert.Equal(expected, content);
         }
+
+        [Fact]
+        public async Task FileUpload_Works()
+        {
+            // Arrange
+            var expected = "42";
+            var content = new MultipartFormDataContent();
+            content.Add(new StringContent(new string('a', 42)), "file", "file.txt");
+
+            using var client = _fixture.CreateDefaultClient();
+
+            // Act
+            var response = await client.PostAsync("/upload", content);
+
+            // Assert
+            await response.AssertStatusCodeAsync(HttpStatusCode.OK);
+            var actual = await response.Content.ReadAsStringAsync();
+            Assert.Equal(expected, actual);
+        }
     }
 }

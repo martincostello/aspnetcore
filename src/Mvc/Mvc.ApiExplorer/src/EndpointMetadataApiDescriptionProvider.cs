@@ -1,13 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
-using System.Threading;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -105,6 +102,7 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
             };
 
             var hasJsonBody = false;
+            var hasFormFile = false;
 
             foreach (var parameter in methodInfo.GetParameters())
             {
@@ -119,11 +117,15 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
                 {
                     hasJsonBody = true;
                 }
+                else if (parameterDescription.Source == BindingSource.FormFile)
+                {
+                    hasFormFile = true;
+                }
 
                 apiDescription.ParameterDescriptions.Add(parameterDescription);
             }
 
-            AddSupportedRequestFormats(apiDescription.SupportedRequestFormats, hasJsonBody, routeEndpoint.Metadata);
+            AddSupportedRequestFormats(apiDescription.SupportedRequestFormats, hasJsonBody, hasFormFile, routeEndpoint.Metadata);
             AddSupportedResponseTypes(apiDescription.SupportedResponseTypes, methodInfo.ReturnType, routeEndpoint.Metadata);
 
             AddActionDescriptorEndpointMetadata(apiDescription.ActionDescriptor, routeEndpoint.Metadata);
@@ -178,12 +180,17 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
             {
                 return (BindingSource.Body, parameter.Name ?? string.Empty, fromBodyAttribute.AllowEmpty);
             }
+            else if (attributes.OfType<IFromFileMetadata>().FirstOrDefault() is { } formFileAttribute)
+            {
+                return (BindingSource.FormFile, formFileAttribute.Name ?? parameter.Name ?? string.Empty, false);
+            }
             else if (parameter.CustomAttributes.Any(a => typeof(IFromServiceMetadata).IsAssignableFrom(a.AttributeType)) ||
                      parameter.ParameterType == typeof(HttpContext) ||
                      parameter.ParameterType == typeof(HttpRequest) ||
                      parameter.ParameterType == typeof(HttpResponse) ||
                      parameter.ParameterType == typeof(ClaimsPrincipal) ||
                      parameter.ParameterType == typeof(CancellationToken) ||
+                     parameter.ParameterType == typeof(IFormFileCollection) ||
                      TryParseMethodCache.HasTryParseHttpContextMethod(parameter) ||
                      _serviceProviderIsService?.IsService(parameter.ParameterType) == true)
             {
@@ -201,6 +208,10 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
                     return (BindingSource.Query, parameter.Name ?? string.Empty, false);
                 }
             }
+            else if (parameter.ParameterType == typeof(IFormFile))
+            {
+                return (BindingSource.FormFile, parameter.Name ?? string.Empty, false);
+            }
             else
             {
                 return (BindingSource.Body, parameter.Name ?? string.Empty, false);
@@ -210,6 +221,7 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
         private static void AddSupportedRequestFormats(
             IList<ApiRequestFormat> supportedRequestFormats,
             bool hasJsonBody,
+            bool hasFormFile,
             EndpointMetadataCollection endpointMetadata)
         {
             var requestMetadata = endpointMetadata.GetOrderedMetadata<IApiRequestMetadataProvider>();
@@ -230,6 +242,13 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
                 supportedRequestFormats.Add(new ApiRequestFormat
                 {
                     MediaType = "application/json",
+                });
+            }
+            else if (hasFormFile)
+            {
+                supportedRequestFormats.Add(new ApiRequestFormat
+                {
+                    MediaType = "multipart/form-data",
                 });
             }
         }

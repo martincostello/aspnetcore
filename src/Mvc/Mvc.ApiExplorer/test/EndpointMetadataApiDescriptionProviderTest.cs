@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
@@ -139,6 +140,34 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
             var responseFormat = Assert.Single(responseType.ApiResponseFormats);
             Assert.Equal("text/plain", responseFormat.MediaType);
             Assert.Null(responseFormat.Formatter);
+        }
+
+        [Fact]
+        public void AddsMultipartFormDataResponseFormatWhenFormFileSpecified()
+        {
+            var apiDescription = GetApiDescription((IFormFile file) => Results.NoContent());
+
+            var requestFormat = Assert.Single(apiDescription.SupportedRequestFormats);
+            Assert.Equal("multipart/form-data", requestFormat.MediaType);
+            Assert.Null(requestFormat.Formatter);
+        }
+
+        [Fact]
+        public void AddsMultipleRequestFormatsWhenFormFileSpecified()
+        {
+            var apiDescription = GetApiDescription(
+                [Consumes("application/custom0", "application/custom1")]
+                (IFormFile file) => Results.NoContent());
+
+            Assert.Equal(2, apiDescription.SupportedRequestFormats.Count);
+
+            var requestFormat0 = apiDescription.SupportedRequestFormats[0];
+            Assert.Equal("application/custom0", requestFormat0.MediaType);
+            Assert.Null(requestFormat0.Formatter);
+
+            var requestFormat1 = apiDescription.SupportedRequestFormats[1];
+            Assert.Equal("application/custom1", requestFormat1.MediaType);
+            Assert.Null(requestFormat1.Formatter);
         }
 
         [Fact]
@@ -300,6 +329,7 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
             Assert.Empty(GetApiDescription((ClaimsPrincipal user) => { }).ParameterDescriptions);
             Assert.Empty(GetApiDescription((CancellationToken token) => { }).ParameterDescriptions);
             Assert.Empty(GetApiDescription((TryParseHttpContextRecord context) => { }).ParameterDescriptions);
+            Assert.Empty(GetApiDescription((IFormFileCollection files) => { }).ParameterDescriptions);
         }
 
         [Fact]
@@ -315,6 +345,29 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
 
             AssertBodyParameter(GetApiDescription((InferredJsonClass foo) => { }), typeof(InferredJsonClass));
             AssertBodyParameter(GetApiDescription(([FromBody] int foo) => { }), typeof(int));
+        }
+
+        [Fact]
+        public void AddsFromFormParameterAsFormFile()
+        {
+            static void AssertFormFileParameter(ApiDescription apiDescription, Type expectedType, string expectedName)
+            {
+                var param = Assert.Single(apiDescription.ParameterDescriptions);
+                Assert.Equal(expectedType, param.Type);
+                Assert.Equal(expectedType, param.ModelMetadata.ModelType);
+                Assert.Equal(BindingSource.FormFile, param.Source);
+                Assert.Equal(expectedName, param.Name);
+            }
+
+            AssertFormFileParameter(GetApiDescription((IFormFile file) => { }), typeof(IFormFile), "file");
+            AssertFormFileParameter(GetApiDescription(([FromFile(Name = "file_name")] IFormFile file) => { }), typeof(IFormFile), "file_name");
+        }
+
+        // TODO Can remove this when there's an agreed concrete implementation of IFromFileMetadata
+
+        private sealed class FromFileAttribute : Attribute, IFromFileMetadata
+        {
+            public string Name { get; set; }
         }
 
         [Fact]
@@ -391,6 +444,27 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
             Assert.Equal(typeof(InferredJsonClass), fromBodyParam1.ModelMetadata.ModelType);
             Assert.Equal(BindingSource.Body, fromBodyParam1.Source);
             Assert.False(fromBodyParam1.IsRequired);
+        }
+
+        [Fact]
+        public void TestIsRequiredFromFormFile()
+        {
+            var apiDescription0 = GetApiDescription((IFormFile fromFile) => { });
+            var apiDescription1 = GetApiDescription((IFormFile? fromFile) => { });
+            Assert.Equal(1, apiDescription0.ParameterDescriptions.Count);
+            Assert.Equal(1, apiDescription1.ParameterDescriptions.Count);
+
+            var fromFileParam0 = apiDescription0.ParameterDescriptions[0];
+            Assert.Equal(typeof(IFormFile), fromFileParam0.Type);
+            Assert.Equal(typeof(IFormFile), fromFileParam0.ModelMetadata.ModelType);
+            Assert.Equal(BindingSource.FormFile, fromFileParam0.Source);
+            Assert.True(fromFileParam0.IsRequired);
+
+            var fromFileParam1 = apiDescription1.ParameterDescriptions[0];
+            Assert.Equal(typeof(IFormFile), fromFileParam1.Type);
+            Assert.Equal(typeof(IFormFile), fromFileParam1.ModelMetadata.ModelType);
+            Assert.Equal(BindingSource.FormFile, fromFileParam1.Source);
+            Assert.False(fromFileParam1.IsRequired);
         }
 
         // This is necessary for TestIsRequiredFromBody to pass until https://github.com/dotnet/roslyn/issues/55254 is resolved.
