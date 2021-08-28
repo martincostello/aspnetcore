@@ -1,0 +1,70 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Globalization;
+using Microsoft.AspNetCore.Analyzer.Testing;
+
+namespace Microsoft.AspNetCore.Analyzers.WebApplicationBuilder;
+
+public partial class DisallowConfigureHostBuilderConfigureWebHostTest
+{
+    private TestDiagnosticAnalyzerRunner Runner { get; } = new(new WebApplicationBuilderAnalyzer());
+
+    [Fact]
+    public async Task WebApplicationBuilder_HostWithoutConfigureWebHost_Works()
+    {
+        // Arrange
+        var source = @"
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
+var builder = WebApplication.CreateBuilder();
+builder.Host.ConfigureServices(services => { });
+";
+        // Act
+        var diagnostics = await Runner.GetDiagnosticsAsync(source);
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task WebApplicationBuilder_HostWithConfigureWebHost_ProducesDiagnostics()
+    {
+        // Arrange
+        var source = TestSource.Read(@"
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
+var builder = WebApplication.CreateBuilder();
+builder.Host.ConfigureWebHost(webHostBuilder => { });
+");
+        // Act
+        var diagnostics = await Runner.GetDiagnosticsAsync(source.Source);
+
+        // Assert
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Same(DiagnosticDescriptors.DoNotUseConfigureWebHostWithConfigureHostBuilder, diagnostic.Descriptor);
+        AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
+        Assert.Equal("Do not use ConfigureWebHost with WebApplicationBuilder.Host", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public async Task WebApplicationBuilder_HostWithConfigureWebHostWithOptions_ProducesDiagnostics()
+    {
+        // Arrange
+        var source = TestSource.Read(@"
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+var builder = WebApplication.CreateBuilder();
+builder.Host.ConfigureWebHost((webHostBuilder) => { }, (optionsBuilder) => { });
+");
+        // Act
+        var diagnostics = await Runner.GetDiagnosticsAsync(source.Source);
+
+        // Assert
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Same(DiagnosticDescriptors.DoNotUseConfigureWebHostWithConfigureHostBuilder, diagnostic.Descriptor);
+        AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
+        Assert.Equal("Do not use ConfigureWebHost with WebApplicationBuilder.Host", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+    }
+}
