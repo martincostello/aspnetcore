@@ -71,6 +71,33 @@ builder.WebHost./*MM*/Configure((context, webHostBuilder) => { });
     }
 
     [Fact]
+    public async Task WebApplicationBuilder_WebHostWithConfigure_ProducesDiagnostics_In_Program_Main()
+    {
+        // Arrange
+        var source = TestSource.Read(@"
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+public static class Program
+{
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
+        /*MM*/builder.WebHost.Configure((context, webHostBuilder) => { });
+    }
+}
+public class Startup { }
+");
+        // Act
+        var diagnostics = await Runner.GetDiagnosticsAsync(source.Source);
+
+        // Assert
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Same(DiagnosticDescriptors.DoNotUseConfigureWithConfigureWebHostBuilder, diagnostic.Descriptor);
+        AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
+        Assert.Equal("Configure cannot be used with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
     public async Task HostBuilder_WebHostBuilder_Configure_DoesNotProduceDiagnostic()
     {
         // Arrange
