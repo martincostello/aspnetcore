@@ -130,7 +130,17 @@ public class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
                 return false;
             }
 
-            return disallowedMethodTypes.Any(type => SymbolEqualityComparer.Default.Equals(type, methodSymbol.ContainingType));
+            var length = disallowedMethodTypes.Length;
+            for (var i = 0; i < length; i++)
+            {
+                var type = disallowedMethodTypes[i];
+                if (SymbolEqualityComparer.Default.Equals(type, methodSymbol.ContainingType))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 
