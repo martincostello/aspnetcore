@@ -36,92 +36,66 @@ public class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
                 return;
             }
 
+            INamedTypeSymbol[] configureTypes = { wellKnownTypes.WebHostBuilderExtensions };
+            INamedTypeSymbol[] configureWebHostTypes = { wellKnownTypes.GenericHostWebHostBuilderExtensions };
+            INamedTypeSymbol[] userStartupTypes =
+            {
+                wellKnownTypes.HostingAbstractionsWebHostBuilderExtensions,
+                wellKnownTypes.WebHostBuilderExtensions,
+            };
+
             compilationStartAnalysisContext.RegisterOperationAction(operationAnalysisContext =>
             {
                 var invocation = (IInvocationOperation)operationAnalysisContext.Operation;
                 var targetMethod = invocation.TargetMethod;
 
-                DisallowConfigureHostBuilderConfigureWebHost(
-                    operationAnalysisContext,
-                    wellKnownTypes,
-                    invocation,
-                    targetMethod);
+                // var builder = WebApplication.CreateBuilder();
+                // builder.Host.ConfigureWebHost(x => {});
+                if (IsDisallowedMethod(
+                        operationAnalysisContext,
+                        invocation,
+                        targetMethod,
+                        wellKnownTypes.ConfigureHostBuilder,
+                        "ConfigureWebHost",
+                        configureWebHostTypes))
+                {
+                    operationAnalysisContext.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.DoNotUseConfigureWebHostWithConfigureHostBuilder,
+                        invocation.Syntax.GetLocation()));
+                }
 
-                DisallowConfigureWebHostBuilderConfigure(
-                    operationAnalysisContext,
-                    wellKnownTypes,
-                    invocation,
-                    targetMethod);
+                // var builder = WebApplication.CreateBuilder();
+                // builder.WebHost.Configure(x => {});
+                if (IsDisallowedMethod(
+                        operationAnalysisContext,
+                        invocation,
+                        targetMethod,
+                        wellKnownTypes.ConfigureWebHostBuilder,
+                        "Configure",
+                        configureTypes))
+                {
+                    operationAnalysisContext.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.DoNotUseConfigureWithConfigureWebHostBuilder,
+                        invocation.Syntax.GetLocation()));
+                }
 
-                DisallowConfigureWebHostBuilderUseStartup(
-                    operationAnalysisContext,
-                    wellKnownTypes,
-                    invocation,
-                    targetMethod);
+                // var builder = WebApplication.CreateBuilder();
+                // builder.WebHost.UseStartup<Startup>();
+                if (IsDisallowedMethod(
+                        operationAnalysisContext,
+                        invocation,
+                        targetMethod,
+                        wellKnownTypes.ConfigureWebHostBuilder,
+                        "UseStartup",
+                        userStartupTypes))
+                {
+                    operationAnalysisContext.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.DoNotUseUseStartupWithConfigureWebHostBuilder,
+                        invocation.Syntax.GetLocation()));
+                }
 
             }, OperationKind.Invocation);
         });
-    }
-
-    private static void DisallowConfigureHostBuilderConfigureWebHost(
-        in OperationAnalysisContext context,
-        WellKnownTypes wellKnownTypes,
-        IInvocationOperation invocation,
-        IMethodSymbol methodSymbol)
-    {
-        if (IsDisallowedMethod(
-                context,
-                invocation,
-                methodSymbol,
-                wellKnownTypes.ConfigureHostBuilder,
-                "ConfigureWebHost",
-                wellKnownTypes.GenericHostWebHostBuilderExtensions))
-        {
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.DoNotUseConfigureWebHostWithConfigureHostBuilder,
-                invocation.Syntax.GetLocation()));
-        }
-    }
-
-    private static void DisallowConfigureWebHostBuilderConfigure(
-        in OperationAnalysisContext context,
-        WellKnownTypes wellKnownTypes,
-        IInvocationOperation invocation,
-        IMethodSymbol methodSymbol)
-    {
-        if (IsDisallowedMethod(
-                context,
-                invocation,
-                methodSymbol,
-                wellKnownTypes.ConfigureWebHostBuilder,
-                "Configure",
-                wellKnownTypes.WebHostBuilderExtensions))
-        {
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.DoNotUseConfigureWithConfigureWebHostBuilder,
-                invocation.Syntax.GetLocation()));
-        }
-    }
-
-    private static void DisallowConfigureWebHostBuilderUseStartup(
-        in OperationAnalysisContext context,
-        WellKnownTypes wellKnownTypes,
-        IInvocationOperation invocation,
-        IMethodSymbol methodSymbol)
-    {
-        if (IsDisallowedMethod(
-                context,
-                invocation,
-                methodSymbol,
-                wellKnownTypes.ConfigureWebHostBuilder,
-                "UseStartup",
-                wellKnownTypes.HostingAbstractionsWebHostBuilderExtensions,
-                wellKnownTypes.WebHostBuilderExtensions))
-        {
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.DoNotUseUseStartupWithConfigureWebHostBuilder,
-                invocation.Syntax.GetLocation()));
-        }
     }
 
     private static bool IsDisallowedMethod(
@@ -130,7 +104,7 @@ public class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
         IMethodSymbol methodSymbol,
         INamedTypeSymbol disallowedReceiverType,
         string disallowedMethodName,
-        params INamedTypeSymbol[] disallowedMethodTypes)
+        INamedTypeSymbol[] disallowedMethodTypes)
     {
         if (!IsDisallowedMethod(methodSymbol, disallowedMethodName, disallowedMethodTypes))
         {
