@@ -13,7 +13,7 @@ using Microsoft.CodeAnalysis.Operations;
 namespace Microsoft.AspNetCore.Analyzers.WebApplicationBuilder;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public partial class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
+public class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(new[]
     {
@@ -61,6 +61,67 @@ public partial class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
 
             }, OperationKind.Invocation);
         });
+    }
+
+    private static void DisallowConfigureHostBuilderConfigureWebHost(
+        in OperationAnalysisContext context,
+        WellKnownTypes wellKnownTypes,
+        IInvocationOperation invocation,
+        IMethodSymbol methodSymbol)
+    {
+        if (IsDisallowedMethod(
+                context,
+                invocation,
+                methodSymbol,
+                wellKnownTypes.ConfigureHostBuilder,
+                "ConfigureWebHost",
+                wellKnownTypes.GenericHostWebHostBuilderExtensions))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.DoNotUseConfigureWebHostWithConfigureHostBuilder,
+                invocation.Syntax.GetLocation()));
+        }
+    }
+
+    private static void DisallowConfigureWebHostBuilderConfigure(
+        in OperationAnalysisContext context,
+        WellKnownTypes wellKnownTypes,
+        IInvocationOperation invocation,
+        IMethodSymbol methodSymbol)
+    {
+        if (IsDisallowedMethod(
+                context,
+                invocation,
+                methodSymbol,
+                wellKnownTypes.ConfigureWebHostBuilder,
+                "Configure",
+                wellKnownTypes.WebHostBuilderExtensions))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.DoNotUseConfigureWithConfigureWebHostBuilder,
+                invocation.Syntax.GetLocation()));
+        }
+    }
+
+    private static void DisallowConfigureWebHostBuilderUseStartup(
+        in OperationAnalysisContext context,
+        WellKnownTypes wellKnownTypes,
+        IInvocationOperation invocation,
+        IMethodSymbol methodSymbol)
+    {
+        if (IsDisallowedMethod(
+                context,
+                invocation,
+                methodSymbol,
+                wellKnownTypes.ConfigureWebHostBuilder,
+                "UseStartup",
+                wellKnownTypes.HostingAbstractionsWebHostBuilderExtensions,
+                wellKnownTypes.WebHostBuilderExtensions))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.DoNotUseUseStartupWithConfigureWebHostBuilder,
+                invocation.Syntax.GetLocation()));
+        }
     }
 
     private static bool IsDisallowedMethod(
