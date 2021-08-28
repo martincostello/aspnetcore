@@ -134,7 +134,7 @@ public class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    // GetReceiverType() adapted from IOperationExtensions.GetReceiv in dotnet/roslyn-analyzers.
+    // GetReceiverType() adapted from IOperationExtensions.GetReceiverType in dotnet/roslyn-analyzers.
     // See https://github.com/dotnet/roslyn-analyzers/blob/762b08948cdcc1d94352fba681296be7bf474dd7/src/Utilities/Compiler/Extensions/IOperationExtensions.cs#L22-L51
 
     private static INamedTypeSymbol? GetReceiverType(
