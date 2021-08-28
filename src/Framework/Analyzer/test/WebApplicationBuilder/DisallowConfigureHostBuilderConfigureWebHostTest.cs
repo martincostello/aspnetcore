@@ -67,4 +67,21 @@ builder.Host./*MM*/ConfigureWebHost(webHostBuilder => { }, optionsBuilder => { }
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
         Assert.Equal("ConfigureWebHost cannot be used with WebApplicationBuilder.Host", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
+
+    [Fact]
+    public async Task HostBuilder_ConfigureWebHost_DoesNotProduceDiagnostic()
+    {
+        // Arrange
+        var source = @"
+using Microsoft.Extensions.Hosting;
+var builder = Host.CreateDefaultBuilder();
+builder.ConfigureWebHost(webHostBuilder => { });
+builder.ConfigureWebHost(webHostBuilder => { }, optionsBuilder => { });
+";
+        // Act
+        var diagnostics = await Runner.GetDiagnosticsAsync(source);
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
 }

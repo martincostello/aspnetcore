@@ -109,4 +109,46 @@ public class Startup { }
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
         Assert.Equal("UseStartup cannot be used with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
+
+    [Fact]
+    public async Task HostBuilder_WebHostBuilder_UseStartup_DoesNotProduceDiagnostic()
+    {
+        // Arrange
+        var source = @"
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+var builder = Host.CreateDefaultBuilder();
+builder.ConfigureWebHostDefaults(webHostBuilder => webHostBuilder.UseStartup<Startup>());
+builder.ConfigureWebHostDefaults(webHostBuilder => webHostBuilder.UseStartup(typeof(Startup)));
+builder.ConfigureWebHostDefaults(webHostBuilder => webHostBuilder.UseStartup(""Startup""));
+builder.ConfigureWebHostDefaults(webHostBuilder => webHostBuilder.UseStartup(context => new Startup()));
+public class Startup { }
+";
+        // Act
+        var diagnostics = await Runner.GetDiagnosticsAsync(source);
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task WebHostBuilder_UseStartup_DoesNotProduceDiagnostic()
+    {
+        // Arrange
+        var source = @"
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
+var builder = WebHost.CreateDefaultBuilder();
+builder.UseStartup<Startup>();
+builder.UseStartup(typeof(Startup));
+builder.UseStartup(""Startup"");
+builder.UseStartup(context => new Startup());
+public class Startup { }
+";
+        // Act
+        var diagnostics = await Runner.GetDiagnosticsAsync(source);
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
 }
