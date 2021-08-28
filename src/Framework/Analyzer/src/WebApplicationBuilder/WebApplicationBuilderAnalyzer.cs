@@ -168,6 +168,8 @@ public class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
             }
         }
 
+        return null;
+
         static INamedTypeSymbol? GetReceiverType(
             SyntaxNode receiverSyntax,
             SemanticModel model,
@@ -176,7 +178,5 @@ public class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
             var typeInfo = model.GetTypeInfo(receiverSyntax, cancellationToken);
             return typeInfo.Type as INamedTypeSymbol;
         }
-
-        return null;
     }
 }
