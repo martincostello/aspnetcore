@@ -37,7 +37,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder();
-builder.WebHost.Configure(webHostBuilder => { });
+builder.WebHost./*MM*/Configure(webHostBuilder => { });
 ");
         // Act
         var diagnostics = await Runner.GetDiagnosticsAsync(source.Source);
@@ -46,7 +46,7 @@ builder.WebHost.Configure(webHostBuilder => { });
         var diagnostic = Assert.Single(diagnostics);
         Assert.Same(DiagnosticDescriptors.DoNotUseConfigureWithConfigureWebHostBuilder, diagnostic.Descriptor);
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
-        Assert.Equal("Do not use Configure with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal("Configure cannot be used with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder();
-builder.WebHost.Configure((context, webHostBuilder) => { });
+builder.WebHost./*MM*/Configure((context, webHostBuilder) => { });
 ");
         // Act
         var diagnostics = await Runner.GetDiagnosticsAsync(source.Source);
@@ -67,6 +67,6 @@ builder.WebHost.Configure((context, webHostBuilder) => { });
         var diagnostic = Assert.Single(diagnostics);
         Assert.Same(DiagnosticDescriptors.DoNotUseConfigureWithConfigureWebHostBuilder, diagnostic.Descriptor);
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
-        Assert.Equal("Do not use Configure with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal("Configure cannot be used with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 }

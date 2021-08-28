@@ -35,7 +35,7 @@ builder.WebHost.ConfigureKestrel(options => { });
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 var builder = WebApplication.CreateBuilder();
-builder.WebHost.UseStartup<Startup>();
+builder.WebHost./*MM*/UseStartup<Startup>();
 public class Startup { }
 ");
         // Act
@@ -45,7 +45,7 @@ public class Startup { }
         var diagnostic = Assert.Single(diagnostics);
         Assert.Same(DiagnosticDescriptors.DoNotUseUseStartupWithConfigureWebHostBuilder, diagnostic.Descriptor);
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
-        Assert.Equal("Do not use UseStartup with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal("UseStartup cannot be used with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class Startup { }
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 var builder = WebApplication.CreateBuilder();
-builder.WebHost.UseStartup(typeof(Startup));
+builder.WebHost./*MM*/UseStartup(typeof(Startup));
 public class Startup { }
 ");
         // Act
@@ -66,7 +66,7 @@ public class Startup { }
         var diagnostic = Assert.Single(diagnostics);
         Assert.Same(DiagnosticDescriptors.DoNotUseUseStartupWithConfigureWebHostBuilder, diagnostic.Descriptor);
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
-        Assert.Equal("Do not use UseStartup with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal("UseStartup cannot be used with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class Startup { }
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 var builder = WebApplication.CreateBuilder();
-builder.WebHost.UseStartup(""Startup"");
+builder.WebHost./*MM*/UseStartup(""Startup"");
 ");
         // Act
         var diagnostics = await Runner.GetDiagnosticsAsync(source.Source);
@@ -86,7 +86,7 @@ builder.WebHost.UseStartup(""Startup"");
         var diagnostic = Assert.Single(diagnostics);
         Assert.Same(DiagnosticDescriptors.DoNotUseUseStartupWithConfigureWebHostBuilder, diagnostic.Descriptor);
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
-        Assert.Equal("Do not use UseStartup with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal("UseStartup cannot be used with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ builder.WebHost.UseStartup(""Startup"");
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 var builder = WebApplication.CreateBuilder();
-builder.WebHost.UseStartup(context => new Startup());
+builder.WebHost./*MM*/UseStartup(context => new Startup());
 public class Startup { }
 ");
         // Act
@@ -107,6 +107,6 @@ public class Startup { }
         var diagnostic = Assert.Single(diagnostics);
         Assert.Same(DiagnosticDescriptors.DoNotUseUseStartupWithConfigureWebHostBuilder, diagnostic.Descriptor);
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
-        Assert.Equal("Do not use UseStartup with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal("UseStartup cannot be used with WebApplicationBuilder.WebHost", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 }

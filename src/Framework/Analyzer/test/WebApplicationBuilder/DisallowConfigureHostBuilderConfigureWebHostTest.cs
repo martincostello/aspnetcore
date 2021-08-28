@@ -35,7 +35,7 @@ builder.Host.ConfigureServices(services => { });
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder();
-builder.Host.ConfigureWebHost(webHostBuilder => { });
+builder.Host./*MM*/ConfigureWebHost(webHostBuilder => { });
 ");
         // Act
         var diagnostics = await Runner.GetDiagnosticsAsync(source.Source);
@@ -44,7 +44,7 @@ builder.Host.ConfigureWebHost(webHostBuilder => { });
         var diagnostic = Assert.Single(diagnostics);
         Assert.Same(DiagnosticDescriptors.DoNotUseConfigureWebHostWithConfigureHostBuilder, diagnostic.Descriptor);
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
-        Assert.Equal("Do not use ConfigureWebHost with WebApplicationBuilder.Host", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal("ConfigureWebHost cannot be used with WebApplicationBuilder.Host", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 
     [Fact]
@@ -56,7 +56,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder();
-builder.Host.ConfigureWebHost((webHostBuilder) => { }, (optionsBuilder) => { });
+builder.Host./*MM*/ConfigureWebHost(webHostBuilder => { }, optionsBuilder => { });
 ");
         // Act
         var diagnostics = await Runner.GetDiagnosticsAsync(source.Source);
@@ -65,6 +65,6 @@ builder.Host.ConfigureWebHost((webHostBuilder) => { }, (optionsBuilder) => { });
         var diagnostic = Assert.Single(diagnostics);
         Assert.Same(DiagnosticDescriptors.DoNotUseConfigureWebHostWithConfigureHostBuilder, diagnostic.Descriptor);
         AnalyzerAssert.DiagnosticLocation(source.DefaultMarkerLocation, diagnostic.Location);
-        Assert.Equal("Do not use ConfigureWebHost with WebApplicationBuilder.Host", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal("ConfigureWebHost cannot be used with WebApplicationBuilder.Host", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 }

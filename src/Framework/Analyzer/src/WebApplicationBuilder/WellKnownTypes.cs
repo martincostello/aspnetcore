@@ -12,18 +12,6 @@ internal sealed class WellKnownTypes
     {
         wellKnownTypes = default;
 
-        const string WebApplication = "Microsoft.AspNetCore.Builder.WebApplication";
-        if (compilation.GetTypeByMetadataName(WebApplication) is not { } webApplication)
-        {
-            return false;
-        }
-
-        const string WebApplicationBuilder = "Microsoft.AspNetCore.Builder.WebApplicationBuilder";
-        if (compilation.GetTypeByMetadataName(WebApplicationBuilder) is not { } webApplicationBuilder)
-        {
-            return false;
-        }
-
         const string ConfigureHostBuilder = "Microsoft.AspNetCore.Builder.ConfigureHostBuilder";
         if (compilation.GetTypeByMetadataName(ConfigureHostBuilder) is not { } configureHostBuilder)
         {
@@ -36,19 +24,39 @@ internal sealed class WellKnownTypes
             return false;
         }
 
+        const string GenericHostWebHostBuilderExtensions = "Microsoft.Extensions.Hosting.GenericHostWebHostBuilderExtensions";
+        if (compilation.GetTypeByMetadataName(GenericHostWebHostBuilderExtensions) is not { } genericHostWebHostBuilderExtensions)
+        {
+            return false;
+        }
+
+        const string WebHostBuilderExtensions = "Microsoft.AspNetCore.Hosting.WebHostBuilderExtensions";
+        if (compilation.GetTypeByMetadataName(WebHostBuilderExtensions) is not { } webHostBuilderExtensions)
+        {
+            return false;
+        }
+
+        const string HostingAbstractionsWebHostBuilderExtensions = "Microsoft.AspNetCore.Hosting.HostingAbstractionsWebHostBuilderExtensions";
+        if (compilation.GetTypeByMetadataName(HostingAbstractionsWebHostBuilderExtensions) is not { } hostingAbstractionsWebHostBuilderExtensions)
+        {
+            return false;
+        }
+
         wellKnownTypes = new WellKnownTypes
         {
-            WebApplication = webApplication,
-            WebApplicationBuilder = webApplicationBuilder,
             ConfigureHostBuilder = configureHostBuilder,
             ConfigureWebHostBuilder = configureWebHostBuilder,
+            GenericHostWebHostBuilderExtensions = genericHostWebHostBuilderExtensions,
+            HostingAbstractionsWebHostBuilderExtensions = hostingAbstractionsWebHostBuilderExtensions,
+            WebHostBuilderExtensions = webHostBuilderExtensions,
         };
 
         return true;
     }
 
-    public INamedTypeSymbol WebApplication { get; private init; }
-    public INamedTypeSymbol WebApplicationBuilder { get; private init; }
     public INamedTypeSymbol ConfigureHostBuilder { get; private init; }
     public INamedTypeSymbol ConfigureWebHostBuilder { get; private init; }
+    public INamedTypeSymbol GenericHostWebHostBuilderExtensions { get; private init; }
+    public INamedTypeSymbol HostingAbstractionsWebHostBuilderExtensions { get; private init; }
+    public INamedTypeSymbol WebHostBuilderExtensions { get; private init; }
 }

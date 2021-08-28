@@ -11,7 +11,7 @@ internal static class DiagnosticDescriptors
     internal static readonly DiagnosticDescriptor DoNotUseConfigureWebHostWithConfigureHostBuilder = new(
         "ASP0005",
         "Do not use ConfigureWebHost with WebApplicationBuilder.Host",
-        "TODO",
+        "ConfigureWebHost cannot be used with WebApplicationBuilder.Host",
         "Usage",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
@@ -20,7 +20,7 @@ internal static class DiagnosticDescriptors
     internal static readonly DiagnosticDescriptor DoNotUseConfigureWithConfigureWebHostBuilder = new(
         "ASP0006",
         "Do not use Configure with WebApplicationBuilder.WebHost",
-        "TODO",
+        "Configure cannot be used with WebApplicationBuilder.WebHost",
         "Usage",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
@@ -29,7 +29,7 @@ internal static class DiagnosticDescriptors
     internal static readonly DiagnosticDescriptor DoNotUseUseStartupWithConfigureWebHostBuilder = new(
         "ASP0007",
         "Do not use UseStartup with WebApplicationBuilder.WebHost",
-        "TODO",
+        "UseStartup cannot be used with WebApplicationBuilder.WebHost",
         "Usage",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
