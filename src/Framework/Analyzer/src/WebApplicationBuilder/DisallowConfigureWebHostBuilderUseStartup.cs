@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
@@ -16,39 +15,18 @@ public partial class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
         IInvocationOperation invocation,
         IMethodSymbol methodSymbol)
     {
-        if (!IsUseStartupInvocation(wellKnownTypes, methodSymbol))
+        if (IsDisallowedMethod(
+                context,
+                invocation,
+                methodSymbol,
+                wellKnownTypes.ConfigureWebHostBuilder,
+                "UseStartup",
+                wellKnownTypes.HostingAbstractionsWebHostBuilderExtensions,
+                wellKnownTypes.WebHostBuilderExtensions))
         {
-            return;
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.DoNotUseUseStartupWithConfigureWebHostBuilder,
+                invocation.Syntax.GetLocation()));
         }
-
-        var receiverType = GetReceiverType(
-            invocation,
-            context.CancellationToken);
-
-        if (!SymbolEqualityComparer.Default.Equals(receiverType, wellKnownTypes.ConfigureWebHostBuilder))
-        {
-            return;
-        }
-
-        var location = Location.None;
-
-        if (invocation.Syntax is not null)
-        {
-            location = invocation.Syntax.GetLocation();
-        }
-
-        context.ReportDiagnostic(Diagnostic.Create(
-            DiagnosticDescriptors.DoNotUseUseStartupWithConfigureWebHostBuilder,
-            location));
-    }
-
-    private static bool IsUseStartupInvocation(
-        WellKnownTypes wellKnownTypes,
-        IMethodSymbol targetMethod)
-    {
-        return targetMethod is not null &&
-            targetMethod.Name.Equals("UseStartup", StringComparison.Ordinal) &&
-            (SymbolEqualityComparer.Default.Equals(wellKnownTypes.HostingAbstractionsWebHostBuilderExtensions, targetMethod.ContainingType) ||
-             SymbolEqualityComparer.Default.Equals(wellKnownTypes.WebHostBuilderExtensions, targetMethod.ContainingType));
     }
 }

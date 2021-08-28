@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -60,6 +61,42 @@ public partial class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
 
             }, OperationKind.Invocation);
         });
+    }
+
+    private static bool IsDisallowedMethod(
+        in OperationAnalysisContext context,
+        IInvocationOperation invocation,
+        IMethodSymbol methodSymbol,
+        INamedTypeSymbol disallowedReceiverType,
+        string disallowedMethodName,
+        params INamedTypeSymbol[] disallowedMethodTypes)
+    {
+        if (!IsDisallowedMethod(methodSymbol, disallowedMethodName, disallowedMethodTypes))
+        {
+            return false;
+        }
+
+        var receiverType = GetReceiverType(invocation, context.CancellationToken);
+
+        if (!SymbolEqualityComparer.Default.Equals(receiverType, disallowedReceiverType))
+        {
+            return false;
+        }
+
+        return true;
+
+        static bool IsDisallowedMethod(
+            IMethodSymbol methodSymbol,
+            string disallowedMethodName,
+            INamedTypeSymbol[] disallowedMethodTypes)
+        {
+            if (!string.Equals(methodSymbol?.Name, disallowedMethodName, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return disallowedMethodTypes.Any(type => SymbolEqualityComparer.Default.Equals(type, methodSymbol.ContainingType));
+        }
     }
 
     // GetReceiverType() adapted from IOperationExtensions.GetReceiv in dotnet/roslyn-analyzers.
