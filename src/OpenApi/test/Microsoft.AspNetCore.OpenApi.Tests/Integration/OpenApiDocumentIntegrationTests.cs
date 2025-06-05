@@ -37,7 +37,7 @@ public sealed class OpenApiDocumentIntegrationTests(SampleAppFixture fixture) : 
     {
         var versionString = version.ToString();
         using var client = fixture.CreateClient();
-        var json = await client.GetStringAsync($"/openapi/{documentName}-{versionString}.json");
+        var json = await client.GetStringAsync($"/openapi/{documentName}.json?version={versionString}");
         var baseSnapshotsDirectory = SkipOnHelixAttribute.OnHelix()
             ? Path.Combine(Environment.GetEnvironmentVariable("HELIX_WORKITEM_ROOT"), "Integration", "snapshots")
             : "snapshots";

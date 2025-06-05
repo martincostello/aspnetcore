@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
 using Microsoft.OpenApi.Extensions;
 using Microsoft.OpenApi.Writers;
 
@@ -53,6 +54,7 @@ public static class OpenApiEndpointRouteBuilderExtensions
                 {
                     var document = await documentService.GetOpenApiDocumentAsync(context.RequestServices, context.Request, context.RequestAborted);
                     var documentOptions = options.Get(lowercasedDocumentName);
+                    var openApiVersion = documentOptions.OpenApiVersionSelector?.Invoke(context) ?? documentOptions.OpenApiVersion;
 
                     using var textWriter = new Utf8BufferTextWriter(System.Globalization.CultureInfo.InvariantCulture);
                     textWriter.SetWriter(context.Response.BodyWriter);
@@ -74,7 +76,7 @@ public static class OpenApiEndpointRouteBuilderExtensions
                     context.Response.ContentType = contentType;
 
                     await context.Response.StartAsync();
-                    await document.SerializeAsync(openApiWriter, documentOptions.OpenApiVersion, context.RequestAborted);
+                    await document.SerializeAsync(openApiWriter, openApiVersion, context.RequestAborted);
                     await context.Response.BodyWriter.FlushAsync(context.RequestAborted);
                 }
             }).ExcludeFromDescription();

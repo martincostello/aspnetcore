@@ -21,13 +21,26 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
 });
 
+Func<HttpContext, OpenApiSpecVersion?> versionSelector = (context) =>
+{
+    if (context.Request.Query["version"] is { Count: 1 } version &&
+        Enum.TryParse<OpenApiSpecVersion>(version, out var result))
+    {
+        return result;
+    }
+
+    return null;
+};
+
 builder.Services.AddOpenApi("v1", options =>
 {
+    options.OpenApiVersionSelector = versionSelector;
     options.AddHeader("X-Version", "1.0");
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 builder.Services.AddOpenApi("v2", options =>
 {
+    options.OpenApiVersionSelector = versionSelector;
     options.AddSchemaTransformer<AddExternalDocsTransformer>();
     options.AddOperationTransformer<AddExternalDocsTransformer>();
     options.AddDocumentTransformer(new AddContactTransformer());
@@ -53,37 +66,9 @@ var documentNames = new[]
     "xml",
 };
 
-foreach (var version in versions)
+foreach (var name in documentNames)
 {
-    builder.Services.AddOpenApi($"v1-{version}", options =>
-    {
-        options.OpenApiVersion = version;
-        options.ShouldInclude = (description) => description.GroupName == null || description.GroupName == "v1";
-        options.AddHeader("X-Version", "1.0");
-        options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
-    });
-    builder.Services.AddOpenApi($"v2-{version}", options =>
-    {
-        options.OpenApiVersion = version;
-        options.ShouldInclude = (description) => description.GroupName == null || description.GroupName == "v2";
-        options.AddSchemaTransformer<AddExternalDocsTransformer>();
-        options.AddOperationTransformer<AddExternalDocsTransformer>();
-        options.AddDocumentTransformer(new AddContactTransformer());
-        options.AddDocumentTransformer((document, context, token) =>
-        {
-            document.Info.License = new OpenApiLicense { Name = "MIT" };
-            return Task.CompletedTask;
-        });
-    });
-
-    foreach (var name in documentNames)
-    {
-        builder.Services.AddOpenApi($"{name}-{version}", options =>
-        {
-            options.OpenApiVersion = version;
-            options.ShouldInclude = (description) => description.GroupName == null || description.GroupName == name;
-        });
-    }
+    builder.Services.AddOpenApi(name, (options) => options.OpenApiVersionSelector = versionSelector);
 }
 
 var app = builder.Build();

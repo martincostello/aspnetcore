@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization.Metadata;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
@@ -38,6 +39,11 @@ public sealed class OpenApiOptions
     /// The version of the OpenAPI specification to use. Defaults to <see cref="OpenApiSpecVersion.OpenApi3_0"/>.
     /// </summary>
     public OpenApiSpecVersion OpenApiVersion { get; set; } = OpenApiSpecVersion.OpenApi3_1;
+
+    /// <summary>
+    /// An optional delegate to determine the OpenAPI version to use for the current HTTP request.
+    /// </summary>
+    public Func<HttpContext, OpenApiSpecVersion?>? OpenApiVersionSelector { get; set; }
 
     /// <summary>
     /// The name of the OpenAPI document this <see cref="OpenApiOptions"/> instance is associated with.
