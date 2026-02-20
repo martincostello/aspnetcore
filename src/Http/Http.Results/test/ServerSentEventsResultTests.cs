@@ -132,7 +132,7 @@ public class ServerSentEventsResultTests
         // Assert
         var producesResponseTypeMetadata = builder.Metadata.OfType<ProducesResponseTypeMetadata>().Last();
         Assert.Equal(StatusCodes.Status200OK, producesResponseTypeMetadata.StatusCode);
-        Assert.Equal(typeof(SseItem<string>), producesResponseTypeMetadata.Type);
+        Assert.Equal(typeof(string), producesResponseTypeMetadata.Type);
         Assert.Collection(producesResponseTypeMetadata.ContentTypes,
             contentType => Assert.Equal("text/event-stream", contentType));
     }

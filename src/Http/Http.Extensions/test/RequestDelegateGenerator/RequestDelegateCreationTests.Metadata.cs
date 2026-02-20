@@ -562,4 +562,19 @@ app.MapPost("/test/pattern", ([AsParameters] AddsCustomParameterMetadata param1)
         Assert.Contains(endpoint.Metadata, m => m is CustomEndpointMetadata { Source: MetadataSource.Property });
         Assert.Contains(endpoint.Metadata, m => m is ParameterNameMetadata { Name: nameof(AddsCustomParameterMetadata.Data) });
     }
+
+    [Fact]
+    public async Task MapAction_ReturnsServerSentEventsResult_Has_Metadata()
+    {
+        var (_, compilation) = await RunGeneratorAsync("""
+app.MapGet("/", () => TypedResults.ServerSentEvents(AsyncEnumerable.Empty<Todo>()));
+""");
+
+        var endpoint = GetEndpointFromCompilation(compilation);
+
+        var metadata = endpoint.Metadata.OfType<IProducesResponseTypeMetadata>().Single();
+        Assert.Equal(200, metadata.StatusCode);
+        Assert.Equal("text/event-stream", metadata.ContentTypes.Single());
+        Assert.Equal(typeof(Todo), metadata.Type);
+    }
 }

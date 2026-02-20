@@ -104,7 +104,7 @@ public sealed class ServerSentEventsResult<T> : IResult, IEndpointMetadataProvid
         ArgumentNullException.ThrowIfNull(method);
         ArgumentNullException.ThrowIfNull(builder);
 
-        builder.Metadata.Add(new ProducesResponseTypeMetadata(StatusCodes.Status200OK, typeof(SseItem<T>), contentTypes: ["text/event-stream"]));
+        builder.Metadata.Add(new ProducesResponseTypeMetadata(StatusCodes.Status200OK, typeof(T), contentTypes: ["text/event-stream"]));
         builder.Metadata.Add(DisableCookieRedirectMetadata.Instance);
     }
 }
