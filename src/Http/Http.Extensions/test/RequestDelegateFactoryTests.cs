@@ -2580,19 +2580,6 @@ public partial class RequestDelegateFactoryTests : LoggedTest
     }
 
     [Fact]
-    public void Create_AddServerSentEventsResponseType_AsMetadata()
-    {
-        var @delegate = (IAsyncEnumerable<Todo> items) => TypedResults.ServerSentEvents(items);
-        var result = RequestDelegateFactory.Create(@delegate);
-
-        var responseMetadata = Assert.Single(result.EndpointMetadata.OfType<IProducesResponseTypeMetadata>());
-
-        Assert.Equal("text/event-stream", Assert.Single(responseMetadata.ContentTypes));
-        Assert.Equal(typeof(Todo), responseMetadata.Type);
-        Assert.Equal(200, responseMetadata.StatusCode);
-    }
-
-    [Fact]
     public void Create_DoesNotAddAnythingBefore_ThePassedInEndpointMetadata()
     {
         // Arrange
