@@ -79,6 +79,7 @@ public sealed class ProblemHttpResult : IResult, IEndpointMetadataProvider, ISta
         ArgumentNullException.ThrowIfNull(method);
         ArgumentNullException.ThrowIfNull(builder);
 
+        builder.Metadata.Add(ProducesResponseTypeMetadata.CreateUnvalidated(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, ContentTypeConstants.ProblemDetailsContentTypes));
         builder.Metadata.Add(DisableCookieRedirectMetadata.Instance);
     }
 }

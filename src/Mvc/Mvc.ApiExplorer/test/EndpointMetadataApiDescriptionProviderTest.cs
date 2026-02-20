@@ -533,18 +533,17 @@ public class EndpointMetadataApiDescriptionProviderTest
     }
 
     [Fact]
-    public void HandlesTypedResultsWithoutIEndpointMetadataProviderImplementation()
+    public void HandlesTypedResultsWithIEndpointMetadataProviderImplementation()
     {
-        // TypedResults for ProblemDetails doesn't implement IEndpointMetadataProvider
+        // ProblemHttpResult implements IEndpointMetadataProvider and produces response type metadata
         var apiDescription = GetApiDescription(() => TypedResults.Problem());
 
         Assert.Single(apiDescription.SupportedResponseTypes);
 
         var responseType = apiDescription.SupportedResponseTypes[0];
 
-        Assert.Equal(200, responseType.StatusCode);
-        Assert.Equal(typeof(void), responseType.Type);
-        Assert.Equal(typeof(void), responseType.ModelMetadata?.ModelType);
+        Assert.Equal(500, responseType.StatusCode);
+        Assert.Equal(typeof(ProblemDetails), responseType.Type);
     }
 
     [Fact]
@@ -608,24 +607,22 @@ public class EndpointMetadataApiDescriptionProviderTest
                     : TypedResults.Problem();
             });
 
-        Assert.Equal(2, apiDescription.SupportedResponseTypes.Count);
+        Assert.Equal(3, apiDescription.SupportedResponseTypes.Count);
 
-        var createdResponseType = apiDescription.SupportedResponseTypes[0];
-
-        Assert.Equal(201, createdResponseType.StatusCode);
+        var createdResponseType = apiDescription.SupportedResponseTypes.Single(r => r.StatusCode == 201);
         Assert.Equal(typeof(InferredJsonClass), createdResponseType.Type);
         Assert.Equal(typeof(InferredJsonClass), createdResponseType.ModelMetadata?.ModelType);
-
         var createdResponseFormat = Assert.Single(createdResponseType.ApiResponseFormats);
         Assert.Equal("application/json", createdResponseFormat.MediaType);
 
-        var badRequestResponseType = apiDescription.SupportedResponseTypes[1];
-
-        Assert.Equal(400, badRequestResponseType.StatusCode);
+        var badRequestResponseType = apiDescription.SupportedResponseTypes.Single(r => r.StatusCode == 400);
         Assert.Equal(typeof(void), badRequestResponseType.Type);
         Assert.Equal(typeof(void), badRequestResponseType.ModelMetadata?.ModelType);
-
         Assert.Empty(badRequestResponseType.ApiResponseFormats);
+
+        var problemResponseType = apiDescription.SupportedResponseTypes.Single(r => r.StatusCode == 500);
+        Assert.Equal(typeof(ProblemDetails), problemResponseType.Type);
+        Assert.Single(problemResponseType.ApiResponseFormats, f => f.MediaType == "application/problem+json");
     }
 
     [Fact]
