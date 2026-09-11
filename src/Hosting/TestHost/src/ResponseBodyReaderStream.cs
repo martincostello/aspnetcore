@@ -15,17 +15,25 @@ internal sealed class ResponseBodyReaderStream : Stream
     private bool _readerComplete;
     private bool _aborted;
     private Exception? _abortException;
+    private int _disposed;
 
     private readonly object _abortLock = new object();
     private readonly Action _abortRequest;
     private readonly Action _readComplete;
+    private readonly Action? _pipeReaderComplete;
     private readonly Pipe _pipe;
 
     internal ResponseBodyReaderStream(Pipe pipe, Action abortRequest, Action readComplete)
+        : this(pipe, abortRequest, readComplete, pipeReaderComplete: null)
+    {
+    }
+
+    internal ResponseBodyReaderStream(Pipe pipe, Action abortRequest, Action readComplete, Action? pipeReaderComplete)
     {
         _pipe = pipe ?? throw new ArgumentNullException(nameof(pipe));
         _abortRequest = abortRequest ?? throw new ArgumentNullException(nameof(abortRequest));
         _readComplete = readComplete;
+        _pipeReaderComplete = pipeReaderComplete;
     }
 
     public override bool CanRead => true;
@@ -88,11 +96,38 @@ internal sealed class ResponseBodyReaderStream : Stream
 
         if (result.IsCanceled)
         {
+            // Advance (examine nothing, consume nothing) so the Pipe's internal
+            // read-operation-state doesn't remain permanently marked as in-progress; Reset()
+            // does not clear that state, so leaving it dirty here corrupts a pooled Pipe for
+            // whichever future request reuses it. This can race against a concurrent Dispose()
+            // completing the reader out from under this pending read (e.g. the client disposing
+            // the response stream while a read is in flight) - if so, AdvanceTo throws
+            // InvalidOperationException, which is safe to ignore: the reader is already
+            // completed, so there's no read-operation-state left to clean up.
+            try
+            {
+                _pipe.Reader.AdvanceTo(result.Buffer.Start);
+            }
+            catch (InvalidOperationException)
+            {
+            }
             throw new OperationCanceledException();
         }
 
         if (result.Buffer.IsEmpty && result.IsCompleted)
         {
+            // Always advance, even for an empty/EOF read. Skipping this leaves the Pipe's
+            // internal read-operation-state flagged as still-in-progress ("tentative"), which
+            // Pipe.Reset() does not clear, permanently corrupting a pooled Pipe instance for
+            // whichever future request reuses it. See the comment above for why this is
+            // guarded against a reader that may already have been completed concurrently.
+            try
+            {
+                _pipe.Reader.AdvanceTo(result.Buffer.End);
+            }
+            catch (InvalidOperationException)
+            {
+            }
             _readComplete();
             _readerComplete = true;
             return 0;
@@ -137,12 +172,23 @@ internal sealed class ResponseBodyReaderStream : Stream
 
     protected override void Dispose(bool disposing)
     {
+        // Dispose() can be called more than once for the same stream instance (this is a
+        // documented, supported pattern for IDisposable). Once the underlying Pipe has been
+        // returned to a pool it may already be rented out and in active use by a subsequent,
+        // unrelated request, so guard against re-entering the completion logic (and touching
+        // the Pipe again) on any call after the first.
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
         if (disposing)
         {
             _abortRequest();
         }
 
         _pipe.Reader.Complete();
+        _pipeReaderComplete?.Invoke();
 
         base.Dispose(disposing);
     }

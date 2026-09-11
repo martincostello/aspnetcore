@@ -9,6 +9,7 @@ using System.Net.Http;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.ObjectPool;
 using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.AspNetCore.TestHost;
@@ -22,6 +23,11 @@ public class ClientHandler : HttpMessageHandler
     private readonly ApplicationWrapper _application;
     private readonly Action<HttpContext> _additionalContextConfiguration;
     private readonly PathString _pathBase;
+
+    // HttpContextBuilder creates a request and a response Pipe per call to SendAsync. Pooling and reusing them
+    // (via Pipe.Reset(), once both ends of a given Pipe have completed) avoids repeatedly paying for the
+    // eagerly-allocated internal segment pool that System.IO.Pipelines.Pipe allocates on construction.
+    private readonly ObjectPool<Pipe> _pipePool = new DefaultObjectPoolProvider().Create(new PipePooledObjectPolicy());
 
     /// <summary>
     /// Create a new handler.
@@ -77,7 +83,7 @@ public class ClientHandler : HttpMessageHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var contextBuilder = new HttpContextBuilder(_application, AllowSynchronousIO, PreserveExecutionContext);
+        var contextBuilder = new HttpContextBuilder(_application, AllowSynchronousIO, PreserveExecutionContext, _pipePool);
 
         var requestContent = request.Content;
 
@@ -230,5 +236,26 @@ public class ClientHandler : HttpMessageHandler
     private static void NoExtraConfiguration(HttpContext context)
     {
         // Intentional no op
+    }
+
+    // A Pipe can only be Reset() once both its reader and writer have completed; if a request was aborted before
+    // draining, Reset() throws. In that case we just discard the Pipe (return false) and let it be
+    // garbage collected as before, rather than risk pooling a Pipe that's still in an indeterminate state.
+    private sealed class PipePooledObjectPolicy : PooledObjectPolicy<Pipe>
+    {
+        public override Pipe Create() => new Pipe();
+
+        public override bool Return(Pipe pipe)
+        {
+            try
+            {
+                pipe.Reset();
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
     }
 }
