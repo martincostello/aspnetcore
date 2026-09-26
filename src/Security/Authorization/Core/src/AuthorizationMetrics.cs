@@ -44,6 +44,9 @@ internal sealed class AuthorizationMetrics
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void AuthorizeAttemptCore(ClaimsPrincipal user, string? policyName, AuthorizationResult? result, Exception? exception)
     {
+        // A collection expression isn't used because the TagList(ReadOnlySpan<>) constructor copies the tags with a
+        // native helper, which can be ~10x slower on x64 if the JIT has zeroed the TagList with a 256-bit register
+        // without emitting vzeroupper. See https://github.com/dotnet/runtime/issues/133784.
         var tags = new TagList();
         tags.Add("aspnetcore.user.is_authenticated", user.Identity?.IsAuthenticated == true ? BoxedTrue : BoxedFalse);
 

@@ -987,6 +987,9 @@ internal sealed partial class DefaultHubDispatcher<[DynamicallyAccessedMembers(H
         // Use a reusable list for the tags rather than a TagList, which would be boxed, along with its enumerator,
         // for every invocation. This is safe because the tags are copied into the activity when it's created. The list
         // is taken from the thread-static field while it's in use so a reentrant call can't modify it.
+        // Don't build a TagList and copy it into the list either. On x64 the JIT can zero the TagList with a 256-bit
+        // register without emitting vzeroupper, which makes copying the tags much slower.
+        // See https://github.com/dotnet/runtime/issues/133784.
         var tags = t_activityTags ?? new List<KeyValuePair<string, object?>>(MaxActivityTags);
         t_activityTags = null;
 
