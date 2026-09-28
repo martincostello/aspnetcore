@@ -502,7 +502,7 @@ public abstract partial class Renderer : IDisposable, IAsyncDisposable
         {
             receiverName ??= (callback.Receiver?.GetType() ?? callback.Delegate.Target?.GetType())?.FullName;
             methodName ??= callback.Delegate.Method?.Name;
-            activityHandle = ComponentsActivitySource.StartHandleEventActivity(receiverName, methodName, attributeName);
+            activityHandle = ComponentActivitySource.StartHandleEventActivity(receiverName, methodName, attributeName);
         }
 
         var eventStartTimestamp = ComponentsMetrics.IsSupported && ComponentMetrics != null && ComponentMetrics.IsEventEnabled ? Stopwatch.GetTimestamp() : 0;

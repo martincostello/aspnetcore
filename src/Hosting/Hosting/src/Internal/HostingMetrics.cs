@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Shared;
 
@@ -93,7 +92,7 @@ internal sealed class HostingMetrics : IDisposable
             else if (HostingTelemetryHelpers.IsErrorStatusCode(statusCode))
             {
                 // Add error.type for 5xx status codes when there's no exception.
-                tags.TryAddTag(HostingTelemetryHelpers.AttributeErrorType, statusCode.ToString(CultureInfo.InvariantCulture));
+                tags.TryAddTag(HostingTelemetryHelpers.AttributeErrorType, HostingTelemetryHelpers.GetStatusCodeString(statusCode));
             }
 
             var duration = Stopwatch.GetElapsedTime(startTimestamp, currentTimestamp);

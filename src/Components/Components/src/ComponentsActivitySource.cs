@@ -19,6 +19,11 @@ internal class ComponentsActivitySource
     private static ActivitySource ActivitySource { get; } = new ActivitySource(Name);
     private ComponentsActivityLinkStore? _componentsActivityLinkStore;
 
+    // Consecutive events are usually handled by the same few handlers, such as the keydown and input events of a
+    // text box, so the display names of the most recent handlers are reused rather than formatted for every event.
+    private readonly EventDisplayName?[] _eventDisplayNames = new EventDisplayName?[4];
+    private int _nextEventDisplayName;
+
     // there is no System.Diagnostics.ActivitySource.IsSupported yet
     [FeatureSwitchDefinition("System.Diagnostics.Metrics.Meter.IsSupported")]
     internal static bool IsSupported { get; } =
@@ -65,14 +70,14 @@ internal class ComponentsActivitySource
         StopComponentActivity(ComponentsActivityLinkStore.Route, activityHandle, ex);
     }
 
-    public static ComponentsActivityHandle StartHandleEventActivity(string? componentType, string? methodName, string? attributeName)
+    public ComponentsActivityHandle StartHandleEventActivity(string? componentType, string? methodName, string? attributeName)
     {
         var activity = ActivitySource.CreateActivity(OnEventName, ActivityKind.Internal, parentId: null, null, null);
 
         if (activity is not null)
         {
             var previousActivity = Activity.Current;
-            activity.DisplayName = $"Event {attributeName ?? "[unknown attribute]"} -> {componentType ?? "[unknown component]"}.{methodName ?? "[unknown method]"}";
+            activity.DisplayName = GetEventDisplayName(componentType, methodName, attributeName);
             Activity.Current = null; // do not inherit the parent activity
             activity.Start();
 
@@ -95,6 +100,26 @@ internal class ComponentsActivitySource
             return new ComponentsActivityHandle { Activity = activity, Previous = previousActivity };
         }
         return default;
+    }
+
+    private string GetEventDisplayName(string? componentType, string? methodName, string? attributeName)
+    {
+        var displayNames = _eventDisplayNames;
+        for (var i = 0; i < displayNames.Length; i++)
+        {
+            if (displayNames[i] is { } cached && cached.IsFor(componentType, methodName, attributeName))
+            {
+                return cached.DisplayName;
+            }
+        }
+
+        var displayName = $"Event {attributeName ?? "[unknown attribute]"} -> {componentType ?? "[unknown component]"}.{methodName ?? "[unknown method]"}";
+
+        var index = _nextEventDisplayName;
+        displayNames[index] = new EventDisplayName(componentType, methodName, attributeName, displayName);
+        _nextEventDisplayName = (index + 1) % displayNames.Length;
+
+        return displayName;
     }
 
     public void StopHandleEventActivity(ComponentsActivityHandle activityHandle, Exception? ex)
@@ -136,6 +161,16 @@ internal class ComponentsActivitySource
                 Activity.Current = activityHandle.Previous;
             }
         }
+    }
+
+    private sealed class EventDisplayName(string? componentType, string? methodName, string? attributeName, string displayName)
+    {
+        public string DisplayName { get; } = displayName;
+
+        public bool IsFor(string? eventComponentType, string? eventMethodName, string? eventAttributeName) =>
+            string.Equals(componentType, eventComponentType, StringComparison.Ordinal) &&
+            string.Equals(methodName, eventMethodName, StringComparison.Ordinal) &&
+            string.Equals(attributeName, eventAttributeName, StringComparison.Ordinal);
     }
 }
 

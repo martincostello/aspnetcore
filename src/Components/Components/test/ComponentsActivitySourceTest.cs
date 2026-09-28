@@ -86,7 +86,7 @@ public class ComponentsActivitySourceTest
         componentsActivitySource.StartNavigateActivity("ParentComponent", "/parent");
 
         // Act
-        var activityHandle = ComponentsActivitySource.StartHandleEventActivity(componentType, methodName, attributeName);
+        var activityHandle = componentsActivitySource.StartHandleEventActivity(componentType, methodName, attributeName);
         var activity = activityHandle.Activity;
 
         // Assert
@@ -113,7 +113,7 @@ public class ComponentsActivitySourceTest
         var componentsActivitySource = new ComponentsActivitySource();
         var linkstore = new ComponentsActivityLinkStore(null);
         componentsActivitySource.Init(linkstore);
-        var activityHandle = ComponentsActivitySource.StartHandleEventActivity("TestComponent", "OnClick", "onclick");
+        var activityHandle = componentsActivitySource.StartHandleEventActivity("TestComponent", "OnClick", "onclick");
         var activity = activityHandle.Activity;
         var exception = new InvalidOperationException("Test exception");
 
@@ -133,7 +133,7 @@ public class ComponentsActivitySourceTest
         var componentsActivitySource = new ComponentsActivitySource();
         var linkstore = new ComponentsActivityLinkStore(null);
         componentsActivitySource.Init(linkstore);
-        var activityHandle = ComponentsActivitySource.StartHandleEventActivity("TestComponent", "OnClick", "onclick");
+        var activityHandle = componentsActivitySource.StartHandleEventActivity("TestComponent", "OnClick", "onclick");
         var activity = activityHandle.Activity;
         var task = Task.CompletedTask;
 
@@ -152,7 +152,7 @@ public class ComponentsActivitySourceTest
         var componentsActivitySource = new ComponentsActivitySource();
         var linkstore = new ComponentsActivityLinkStore(null);
         componentsActivitySource.Init(linkstore);
-        var activityHandle = ComponentsActivitySource.StartHandleEventActivity("TestComponent", "OnClick", "onclick");
+        var activityHandle = componentsActivitySource.StartHandleEventActivity("TestComponent", "OnClick", "onclick");
         var activity = activityHandle.Activity;
         var exception = new InvalidOperationException("Test exception");
         var task = Task.FromException(exception);
@@ -192,11 +192,72 @@ public class ComponentsActivitySourceTest
         componentsActivitySource.Init(linkstore);
 
         // Act
-        var activityHandle = ComponentsActivitySource.StartHandleEventActivity(null, null, null);
+        var activityHandle = componentsActivitySource.StartHandleEventActivity(null, null, null);
         var activity = activityHandle.Activity;
 
         // Assert
         Assert.NotNull(activity);
         Assert.Equal("Event [unknown attribute] -> [unknown component].[unknown method]", activity.DisplayName);
+    }
+
+    [Fact]
+    public void StartEventActivity_UsesDisplayNameOfEachHandler()
+    {
+        var componentsActivitySource = new ComponentsActivitySource();
+        var linkstore = new ComponentsActivityLinkStore(null);
+        componentsActivitySource.Init(linkstore);
+
+        // Each handler differs from the first in one value, and there are more handlers than display names are cached for.
+        (string ComponentType, string MethodName, string AttributeName)[] handlers =
+        [
+            ("Counter", "IncrementCount", "onclick"),
+            ("Counter", "IncrementCount", "onclick"),
+            ("Counter", "DecrementCount", "onclick"),
+            ("Counter", "IncrementCount", "oninput"),
+            ("Search", "IncrementCount", "onclick"),
+            (null, "IncrementCount", "onclick"),
+            ("Counter", null, "onclick"),
+            ("Counter", "IncrementCount", null),
+            ("Counter", "IncrementCount", "onclick"),
+        ];
+
+        var displayNames = new List<string>();
+        foreach (var (componentType, methodName, attributeName) in handlers)
+        {
+            var activityHandle = componentsActivitySource.StartHandleEventActivity(componentType, methodName, attributeName);
+            displayNames.Add(activityHandle.Activity!.DisplayName);
+            componentsActivitySource.StopHandleEventActivity(activityHandle, null);
+        }
+
+        Assert.Equal(
+        [
+            "Event onclick -> Counter.IncrementCount",
+            "Event onclick -> Counter.IncrementCount",
+            "Event onclick -> Counter.DecrementCount",
+            "Event oninput -> Counter.IncrementCount",
+            "Event onclick -> Search.IncrementCount",
+            "Event onclick -> [unknown component].IncrementCount",
+            "Event onclick -> Counter.[unknown method]",
+            "Event [unknown attribute] -> Counter.IncrementCount",
+            "Event onclick -> Counter.IncrementCount",
+        ], displayNames);
+    }
+
+    [Fact]
+    public void StartEventActivity_ReusesDisplayNameForRepeatedHandler()
+    {
+        var componentsActivitySource = new ComponentsActivitySource();
+        var linkstore = new ComponentsActivityLinkStore(null);
+        componentsActivitySource.Init(linkstore);
+
+        var first = componentsActivitySource.StartHandleEventActivity("TestComponent", "OnClick", "onclick");
+        componentsActivitySource.StopHandleEventActivity(first, null);
+
+        // Use equal strings that aren't the same instances.
+        var second = componentsActivitySource.StartHandleEventActivity(new string("TestComponent".AsSpan()), new string("OnClick".AsSpan()), new string("onclick".AsSpan()));
+        componentsActivitySource.StopHandleEventActivity(second, null);
+
+        Assert.Equal("Event onclick -> TestComponent.OnClick", first.Activity!.DisplayName);
+        Assert.Same(first.Activity.DisplayName, second.Activity!.DisplayName);
     }
 }

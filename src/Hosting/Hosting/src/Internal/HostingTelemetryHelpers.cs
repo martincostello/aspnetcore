@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.AspNetCore.Http;
@@ -39,6 +40,7 @@ internal static class HostingTelemetryHelpers
     private const string RedactedQueryParameterValue = "REDACTED";
 
     private static readonly object[] BoxedStatusCodes = new object[512];
+    private static readonly string[] StatusCodeStrings = new string[512];
 
     private static readonly FrozenDictionary<string, string> KnownHttpMethods =
         CreateKnownHttpMethods(Environment.GetEnvironmentVariable(KnownHttpMethodsEnvironmentVariable));
@@ -119,6 +121,16 @@ internal static class HostingTelemetryHelpers
         return (uint)statusCode < (uint)boxes.Length
             ? boxes[statusCode] ??= statusCode
             : statusCode;
+    }
+
+    // error.type is the status code of a server error response. int.ToString only caches strings for small values,
+    // so cache them the same way as the boxed status codes.
+    public static string GetStatusCodeString(int statusCode)
+    {
+        var strings = StatusCodeStrings;
+        return (uint)statusCode < (uint)strings.Length
+            ? strings[statusCode] ??= statusCode.ToString(CultureInfo.InvariantCulture)
+            : statusCode.ToString(CultureInfo.InvariantCulture);
     }
 
     public static string GetNormalizedHttpMethod(string method)
